@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-const newTermName = "xterm-webmedia-256color"
+const newTermName = "xterm-256color"
 
 func prepareTerminfo() string {
 	dir := os.TempDir() + "/go-ttyd/terminfo"
