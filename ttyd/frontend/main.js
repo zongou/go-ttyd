@@ -112,11 +112,45 @@ function RefreshScroll() {
 
 function start() {
     term = new Terminal({
-        fontFamily: globalThis.RenderFonts.join(', '),
+        fontFamily: globalThis.RenderFonts.join(', ') + ", Fira Code, Inconsolata, JetBrains Mono, Consolas, DejaVu Sans Mono, Everson Mono, FreeMono, Menlo, Terminal, monospace, Apple Symbols",
+        cursorStyle: "block",
+        fontSize: 14,
+        theme: { background: '#000000' }
     });
+
+    term.options.allowProposedApi = true;
     const fitAddon = new FitAddon.FitAddon();
     const uincode11Addon = new Unicode11Addon.Unicode11Addon();
-    // const webglAddon = new WebglAddon.WebglAddon();
+    const webglAddon = new WebglAddon.WebglAddon();
+
+    var searchAddon = new SearchAddon.SearchAddon();
+    var searchbarAddon = new SearchBarAddon.SearchBarAddon({
+        searchAddon
+    });
+    term.loadAddon(searchAddon);
+    term.loadAddon(searchbarAddon);
+
+    // Binding Shortcuts
+    document.addEventListener('keydown', function (event) {
+        // show searchbar
+        if (event.ctrlKey && event.shiftKey && event.key === 'F') {
+            searchbarAddon.show();
+            event.preventDefault()
+        }
+
+        // hide searchbar
+        if (event.key === 'Escape') {
+            searchbarAddon.hidden();
+            term.focus();
+            event.preventDefault()
+        }
+
+        // copy selection
+        if (event.ctrlKey && event.shiftKey && event.key === 'C') {
+            navigator.clipboard.writeText(term.getSelection());
+            event.preventDefault()
+        }
+    });
 
     term.parser.registerOscHandler(9999, OSCHandler);
     term.registerLinkProvider(LinkProvider);
@@ -125,12 +159,17 @@ function start() {
     // Connection opened
     socket.addEventListener('open', function (event) {
         term.open(document.getElementById('terminal'));
+        term.focus();
         document.querySelector(".xterm-screen").insertBefore(MarkerContent.parentElement, document.querySelector(".xterm-decoration-container"));
         let viewport = document.querySelector('.xterm-scroll-area');
         viewport.parentElement.addEventListener("scroll", RefreshScroll);
         term.loadAddon(fitAddon);
         term.loadAddon(uincode11Addon);
-        // term.loadAddon(webglAddon);
+        term.loadAddon(webglAddon);
+        term.loadAddon(new WebLinksAddon.WebLinksAddon());
+        // term.loadAddon(new CanvasAddon.CanvasAddon());
+        // term.loadAddon(new LigaturesAddon.LigaturesAddon());
+
         fitAddon.fit();
     });
 
@@ -176,9 +215,14 @@ function start() {
 
     term.onRender(RefreshScroll);
 
+    // printf '\033]0;my title\007'
     term.onTitleChange(function (title) {
         document.title = title;
     });
+
+    // term.onSelectionChange(function (msg){
+    //     console.log(term.getSelection());
+    // })
 }
 
 const params = new Map((window.location.search || "?").slice(1).split('&').filter(it => it != '').map((it) => it.split('=').map(it => decodeURIComponent(it))));
@@ -221,15 +265,13 @@ globalThis.loadTermFont = loadTermFont;
 globalThis.RenderFonts = [];
 
 window.addEventListener('load', async function () {
-    await loadTermFont("PureNerdFont", [{ url: "https://cdn.jsdelivr.net/npm/@azurity/pure-nerd-font@1.0.0/PureNerdFont.woff2" }]);
+    await loadTermFont("PureNerdFont", [{ url: "/fonts/PureNerdFont.woff2" }]);
     await prepareTheme();
-    if (globalThis.RenderFonts.length == 1) {
-        // only nerd-font prepared, use go mono as default font
-        await loadTermFont("GoMono", [
-            { url: "https://www.programmingfonts.org/fonts/resources/go-mono/go-mono.ttf", desc: { stretch: 'normal', style: 'normal', weight: '400' } },
-            { url: "https://www.programmingfonts.org/fonts/resources/go-mono/go-mono-italic.ttf", desc: { stretch: 'normal', style: 'italic', weight: '400' } },
-            { url: "https://www.programmingfonts.org/fonts/resources/go-mono/go-mono-bold.ttf", desc: { stretch: 'normal', style: 'normal', weight: '700' } },
-        ]);
-    }
+    // if (globalThis.RenderFonts.length == 1) {
+    //     await loadTermFont("Fira Code", [
+    //         { url: "https://cdn.jsdelivr.net/npm/firacode@6.2.0/distr/woff2/FiraCode-Regular.woff2", desc: { stretch: 'normal', style: 'normal', weight: '400' } },
+    //         { url: "https://cdn.jsdelivr.net/npm/firacode@6.2.0/distr/woff2/FiraCode-Bold.woff2", desc: { stretch: 'normal', style: 'normal', weight: '700' } },
+    //     ]);
+    // }
     start();
 });
